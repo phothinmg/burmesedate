@@ -1,9 +1,9 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "name": "TAGU",
+  "name": "Burmese-Date",
   "darkHighlightTheme": "dark-plus",
   "favicon": "public/logo.png",
-  "entryPoints": ["./src/worldtime-api/index.ts"],
+  "entryPoints": ["./src/worldtime/index.ts", "./src/burmesedate/index.ts"],
   "out": "docs",
   "plugin": [
     "typedoc-umlclass",
