@@ -1,0 +1,19 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "TAGU",
+  "darkHighlightTheme": "dark-plus",
+  "favicon": "public/logo.png",
+  "entryPoints": ["./src/worldtime-api/index.ts"],
+  "out": "docs",
+  "plugin": [
+    "typedoc-umlclass",
+    "typedoc-google-tag-manager-plugin",
+    "typedoc-plugin-clarity",
+    "typedoc-plugin-extras"
+  ],
+  "umlClassDiagram":{
+    "type": "detailed",
+    "location": "local",
+    "format": "svg"
+  }
+}
