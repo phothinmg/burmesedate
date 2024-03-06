@@ -1,15 +1,32 @@
 /* cSpell:disable */
-export class ceDateTime {
+// Description: Modern Myanmar Calendrical Calculations
+//-------------------------------------------------------------------------
+// WebSite: https://yan9a.github.io/mcal/
+// MIT License (https://opensource.org/licenses/MIT)
+// Copyright (c) 2018 Yan Naing Aye
+// Doc: http://cool-emerald.blogspot.com/2013/06/algorithm-program-and-calculation-of.html
+//-------------------------------------------------------------------------
+class Burme {
   constructor(m_jd, m_tz, m_ct = 0, m_SG = 2361222) {
-    if (m_tz == undefined) this.m_tz = ceDateTime.ltzoh();
-    else this.m_tz = m_tz;
-    if (m_jd == undefined) this.m_jd = ceDateTime.jdnow();
-    else this.m_jd = m_jd;
-    this.m_ct = m_ct;
-    this.m_SG = m_SG;
+    // 2361222 - Gregorian start in British calendar (1752/Sep/14)
+    if (m_tz == undefined) this.m_tz = Burme.ltzoh();
+    else this.m_tz = m_tz; // time zone for this particular instance
+    if (m_jd == undefined) this.m_jd = Burme.jdnow();
+    else this.m_jd = m_jd; // julian date in UTC
+    this.m_ct = m_ct; // calendar type [0=British (default), 1=Gregorian, 2=Julian]
+    this.m_SG = m_SG; // Beginning of Gregorian calendar in JDN [default=2361222]
   }
-
+  //Start of core functions #############################################################
+  //-------------------------------------------------------------------------
+  //Julian date to Western date
+  //Credit4 Gregorian date: http://pmyers.pcug.org.au/General/JulianDates.htm
+  //Credit4 Julian Calendar: http://quasar.as.utexas.edu/BillInfo/JulianDatesG.html
+  //input: (jd:julian date,
+  // ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian]
+  // SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
+  //output: Western date (y=year, m=month, d=day, h=hour, n=minute, s=second)
   static j2w(jd, ct = 0, SG = 2361222) {
+    // 2361222-Gregorian start in British calendar (1752/Sep/14)
     var j, jf, y, m, d, h, n, s;
     if (ct == 2 || (ct == 0 && jd < SG)) {
       var b, c, f, e;
@@ -50,12 +67,21 @@ export class ceDateTime {
     s = (jf - n) * 60;
     return { y: y, m: m, d: d, h: h, n: n, s: s };
   }
-
+  //-------------------------------------------------------------------------
+  //Time to Fraction of day starting from 12 noon
+  //input: (h=hour, n=minute, s=second) output: (d: fraction of day)
   static t2d(h, n, s) {
     return (h - 12) / 24 + n / 1440 + s / 86400;
   }
-
+  //-------------------------------------------------------------------------
+  //Western date to Julian date
+  //Credit4 Gregorian2JD: http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
+  //input: (y: year, m: month, d: day, h=hour, n=minute, s=second,
+  // ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian]
+  // SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
+  //output: Julian date
   static w2j(y, m, d, h = 12, n = 0, s = 0, ct = 0, SG = 2361222) {
+    // 2361222-Gregorian start in British calendar (1752/Sep/14)
     var a = Math.floor((14 - m) / 12);
     y = y + 4800 - a;
     m = m + 12 * a - 3;
@@ -74,32 +100,71 @@ export class ceDateTime {
         if (jd > SG) jd = SG;
       }
     }
-    return jd + ceDateTime.t2d(h, n, s);
+    return jd + Burme.t2d(h, n, s);
   }
-
+  //-------------------------------------------------------------------------
+  // convert unix timestamp to jd
   static u2j(ut) {
-    var jd = 2440587.5 + ut / 86400.0;
+    //number of seconds from 1970 Jan 1 00:00:00 (UTC)
+    var jd = 2440587.5 + ut / 86400.0; //converte to day(/24h/60min/60sec) and to JD
     return jd;
   }
-
+  //-------------------------------------------------------------------------
+  // julian date to unix time
   static j2u(jd) {
     return (jd - 2440587.5) * 86400.0 + 0.5;
   }
-
+  //-------------------------------------------------------------------------
+  // get current time in julian date
   static jdnow() {
     var dt = new Date();
-
+    // the number of milliseconds since 1 January 1970 00:00:00 / 1000
     var ut = dt.getTime() / 1000.0;
-    return ceDateTime.u2j(ut);
+    return Burme.u2j(ut);
   }
-
+  //-------------------------------------------------------------------------
+  // get local time zone offset between local time and UTC in days
   static ltzoh() {
     var dt = new Date();
-
+    // the difference, in minutes, between UTC and local time
     var tz = dt.getTimezoneOffset() / 60.0;
-    return -tz;
+    return -tz; // between local time and UTC
   }
-
+  //-------------------------------------------------------------------------
+  // jd to date time string
+  // input: (jd:julian date,
+  //  fs: format string [Optional argument: "%Www %y-%mm-%dd %HH:%nn:%ss %zz"]
+  //  tz : time zone offset in hours (e.g. 8 for GMT +8)
+  //  ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian]
+  //  SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
+  // output: date time string according to fm where formatting strings are as follows
+  // %yyyy : year [0000-9999, e.g. 2018]
+  // %yy : year [00-99 e.g. 18]
+  // %y : year [0-9999, e.g. 201]
+  // %MMM : month [e.g. JAN]
+  // %Mmm : month [e.g. Jan]
+  // %mm : month with zero padding [01-12]
+  // %M : month [e.g. January]
+  // %m : month [1-12]
+  // %dd : day with zero padding [01-31]
+  // %d : day [1-31]
+  // %HH : hour [00-23]
+  // %hh : hour [01-12]
+  // %H : hour [0-23]
+  // %h : hour [1-12]
+  // %AA : AM or PM
+  // %aa : am or pm
+  // %nn : minute with zero padding [00-59]
+  // %n : minute [0-59]
+  // %ss : second [00-59]
+  // %s : second [0-59]
+  // %lll : millisecond [000-999]
+  // %l : millisecond [0-999]
+  // %WWW : Weekday [e.g. SAT]
+  // %Www : Weekday [e.g. Sat]
+  // %W : Weekday [e.g. Saturday]
+  // %w : Weekday number [0=sat, 1=sun, ..., 6=fri]
+  // %zz : time zone (e.g. +08, +06:30)
   static j2s(
     jd,
     fs = "%Www %y-%mm-%dd %HH:%nn:%ss %zz",
@@ -108,11 +173,11 @@ export class ceDateTime {
     SG = 2361222
   ) {
     jd += tz / 24.0;
-    var dt = ceDateTime.j2w(jd, ct, SG);
-    var s = Math.floor(dt.s);
-    var l = Math.floor((dt.s - s) * 1000);
+    var dt = Burme.j2w(jd, ct, SG);
+    var s = Math.floor(dt.s); //shold not take round to make sure s<60
+    var l = Math.floor((dt.s - s) * 1000); // not rounding
     var jdn = Math.floor(jd + 0.5);
-    var wd = (jdn + 2) % 7;
+    var wd = (jdn + 2) % 7; //week day [0=sat, 1=sun, ..., 6=fri]
     var h = dt.h % 12;
     if (h == 0) h = 12;
     var W = [
@@ -139,9 +204,10 @@ export class ceDateTime {
       "December",
     ];
 
+    // replace format string with values
     var fm = fs;
     var fstr, rstr, re;
-
+    //--------------------------------------------------------
     fstr = "%yyyy";
     re = new RegExp(fstr, "g");
     rstr = "0000" + dt.y.toString();
@@ -305,7 +371,25 @@ export class ceDateTime {
     //--------------------------------------------------------
     return fm;
   }
-
+  //-------------------------------------------------------------------------
+  // convert date time string to jd
+  // inputs
+  //  tstr : time string
+  //    accepts following formats
+  //    1: yyyy-mm-dd hh:nn:ss
+  //    2: yyyy-mm-dd hh:nn:ss.ttt
+  //    3: yyyymmddhhnnss
+  //    4: yyyymmddhhnnssttt
+  //    5: yyyy-mm-dd (default time is 12:00:00)
+  //    6: yyyymmdd (default time is 12:00:00)
+  //  tz : time zone offset in hours
+  //   [optional argument: 0 - UTC]
+  //  ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian]
+  //  SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
+  // output
+  //  jd: julian date
+  //    positive integer: ok
+  //    -1 : error
   static s2j(tstr, tz = 0, ct = 0, SG = 2361222) {
     var str, pstr;
     var y = 0,
@@ -316,7 +400,7 @@ export class ceDateTime {
       s = 0,
       ls = 0;
     var jd = -1;
-    str = ceDateTime.GetDigits(tstr);
+    str = Burme.GetDigits(tstr);
     if (str.length == 8 || str.length == 14 || str.length == 17) {
       pstr = str.substr(0, 4);
       y = parseInt(pstr); //get year
@@ -337,37 +421,39 @@ export class ceDateTime {
           s += ls / 1000.0;
         }
       }
-      jd = ceDateTime.w2j(y, m, d, h, n, s, ct, SG) - tz / 24.0; // convert to UTC
+      jd = Burme.w2j(y, m, d, h, n, s, ct, SG) - tz / 24.0; // convert to UTC
     }
     return jd;
   }
-
+  //-------------------------------------------------------------------------
   // set time zone in hours for this instance
   SetTimezone(
     tz //set time zone
   ) {
     if (tz == undefined) {
-      this.m_tz = ceDateTime.ltzoh();
+      this.m_tz = Burme.ltzoh();
     } else if (tz <= 14 || tz >= -12) {
       this.m_tz = tz;
     }
   }
-
+  //-------------------------------------------------------------------------
   // set time to now
   Set2Now() {
-    this.m_jd = ceDateTime.jdnow();
+    this.m_jd = Burme.jdnow();
   }
-
+  //-------------------------------------------------------------------------
   // set time in jd
   SetJD(jd) {
     this.m_jd = jd;
   }
-
+  //-------------------------------------------------------------------------
   // set in unix time
   SetUnixTime(ut) {
-    this.m_jd = ceDateTime.u2j(ut);
+    this.m_jd = Burme.u2j(ut);
   }
-
+  //-------------------------------------------------------------------------
+  // set date time for a timezone and a calendar type
+  // timezone and calendar type won't be affected (tz and ct remain unchanged)
   SetDateTime(
     year,
     month,
@@ -380,29 +466,73 @@ export class ceDateTime {
     SG = 2361222
   ) {
     this.m_jd =
-      ceDateTime.w2j(year, month, day, hour, minute, second, ct, SG) -
-      tz / 24.0;
+      Burme.w2j(year, month, day, hour, minute, second, ct, SG) - tz / 24.0;
   }
-
+  //-------------------------------------------------------------------------
+  // set time using a date time string
+  // inputs
+  //  tstr : time string
+  //    accepts following formats
+  //    1: yyyy-mm-dd hh:nn:ss
+  //    2: yyyy-mm-dd hh:nn:ss.ttt
+  //    3: yyyymmddhhnnss
+  //    4: yyyymmddhhnnssttt
+  //  tz : time zone offset in hours
+  //   [optional argument: 0 - UTC]
+  //  ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian]
+  //  SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
   SetDateTimeString(tstr, tz = 0, ct = 0, SG = 2361222) {
-    var jd = ceDateTime.s2j(tstr, tz, ct, SG);
+    var jd = Burme.s2j(tstr, tz, ct, SG);
     if (jd >= 0) this.m_jd = jd;
   }
-
+  //-------------------------------------------------------------------------
+  // set calendar type [0=British (default), 1=Gregorian, 2=Julian]
   SetCT(ct) {
     ct = Math.round(ct % 3);
     this.m_ct = ct;
   }
-
+  //-------------------------------------------------------------------------
+  // set Beginning of Gregorian calendar in JDN [default=2361222]
   SetSG(sg) {
     sg = Math.round(sg);
     this.m_SG = sg;
   }
-
+  //-------------------------------------------------------------------------
+  // Get Date Time string
+  // input: (fs: format string [Optional argument: "%Www %y-%mm-%dd %HH:%nn:%ss %zz"])
+  // output: date time string according to fm where formatting strings are as follows
+  // %yyyy : year [0000-9999, e.g. 2018]
+  // %yy : year [00-99 e.g. 18]
+  // %y : year [0-9999, e.g. 201]
+  // %MMM : month [e.g. JAN]
+  // %Mmm : month [e.g. Jan]
+  // %mm : month with zero padding [01-12]
+  // %M : month [e.g. January]
+  // %m : month [1-12]
+  // %dd : day with zero padding [01-31]
+  // %d : day [1-31]
+  // %HH : hour [00-23]
+  // %hh : hour [01-12]
+  // %H : hour [0-23]
+  // %h : hour [1-12]
+  // %AA : AM or PM
+  // %aa : am or pm
+  // %nn : minute with zero padding [00-59]
+  // %n : minute [0-59]
+  // %ss : second [00-59]
+  // %s : second [0-59]
+  // %lll : millisecond [000-999]
+  // %l : millisecond [0-999]
+  // %WWW : Weekday [e.g. SAT]
+  // %Www : Weekday [e.g. Sat]
+  // %W : Weekday [e.g. Saturday]
+  // %w : Weekday number [0=sat, 1=sun, ..., 6=fri]
+  // %zz : time zone (e.g. +08, +06:30)
   ToString(fs = "%Www %y-%mm-%dd %HH:%nn:%ss %zz") {
-    return ceDateTime.j2s(this.m_jd, fs, this.m_tz, this.m_ct, this.m_SG);
+    return Burme.j2s(this.m_jd, fs, this.m_tz, this.m_ct, this.m_SG);
   }
-
+  //-------------------------------------------------------------------------
+  // filter input string to get digits only
   static GetDigits(str) {
     var ostr = "";
     var len = str.length;
@@ -413,7 +543,8 @@ export class ceDateTime {
     }
     return ostr;
   }
-
+  //-------------------------------------------------------------------------
+  // get properties
   get jd() {
     return this.m_jd;
   } // julian date
@@ -427,38 +558,38 @@ export class ceDateTime {
     return Math.round(this.m_jd + this.m_tz / 24.0);
   } // julian date number for this time zone
   get y() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     return dt.y;
   } // year
 
   get m() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     return dt.m;
   } // month
 
   get d() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     return dt.d;
   } // day
 
   get h() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     return dt.h;
   } // hour [0-23]
 
   get n() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     return dt.n;
   } // minute
 
   get s() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     var s = Math.floor(dt.s); //shold not take round to make sure s<60
     return s;
   } // second
 
   get l() {
-    var dt = ceDateTime.j2w(this.jdl, this.m_ct, this.m_SG);
+    var dt = Burme.j2w(this.jdl, this.m_ct, this.m_SG);
     var s = Math.floor(dt.s); //shold not take round to make sure s<60
     var l = Math.floor((dt.s - s) * 1000); // not rounding
     return l;
@@ -468,7 +599,7 @@ export class ceDateTime {
     return (this.jdnl + 2) % 7;
   } // weekday [0=sat, 1=sun, ..., 6=fri]
   get ut() {
-    return ceDateTime.j2u(this.m_jd);
+    return Burme.j2u(this.m_jd);
   } // unix time
   get tz() {
     return this.m_tz;
@@ -480,9 +611,14 @@ export class ceDateTime {
     return this.m_SG;
   } // Beginning of Gregorian calendar in JDN [default=2361222]
   get mlen() {
-    return ceDateTime.wml(this.y, this.m, this.m_ct, this.m_SG);
+    return Burme.wml(this.y, this.m, this.m_ct, this.m_SG);
   } // length of this month
-
+  //----------------------------------------------------------------------------
+  // find the length of western month
+  // input: (y=year, m=month [Jan=1, ... , Dec=12],
+  //  ct:calendar type [Optional argument: 0=British (default), 1=Gregorian, 2=Julian])
+  //  SG: Beginning of Gregorian calendar in JDN [Optional argument: (default=2361222)])
+  // output: (wml = length of the month)
   static wml(y, m, ct = 0, SG = 2361222) {
     var j1, j2;
     var m2 = m + 1;
@@ -491,17 +627,31 @@ export class ceDateTime {
       y2++;
       m2 %= 12;
     }
-    j1 = ceDateTime.w2j(y, m, 1, 12, 0, 0, ct, SG);
-    j2 = ceDateTime.w2j(y2, m2, 1, 12, 0, 0, ct, SG);
+    j1 = Burme.w2j(y, m, 1, 12, 0, 0, ct, SG);
+    j2 = Burme.w2j(y2, m2, 1, 12, 0, 0, ct, SG);
     return j2 - j1;
   }
-}
+  //-------------------------------------------------------------------------
+} //Burme
 
-export class ceMmDateTime extends ceDateTime {
+//-------------------------------------------------------------------------
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//-------------------------------------------------------------------------
+
+class BurmeDate extends Burme {
+  //-------------------------------------------------------------------------
   constructor(m_jd, m_tz, m_ct = 0, m_SG = 2361222) {
     super(m_jd, m_tz, m_ct, m_SG);
   }
-
+  //-------------------------------------------------------------------------
+  // Get Myanmar year constants depending on era
+  // Thanks to Myo Zarny and Wunna Ko for earlier Myanmar years data
+  // input: my = myanmar year
+  // output:
+  //  EI = Myanmar calendar era id [1-3] : calculations methods/constants depends on era
+  //  WO = watat offset to compensate
+  //  NM = number of months to find excess days
+  //  EW = exception in watat year
   static GetMyConst(my) {
     var EI,
       WO,
@@ -584,14 +734,17 @@ export class ceMmDateTime extends ceDateTime {
       ];
       wte = [];
     }
-    i = ceMmDateTime.bSearch2(my, fme);
+    i = BurmeDate.bSearch2(my, fme);
     if (i >= 0) WO += fme[i][1]; // full moon day offset exceptions
-    i = ceMmDateTime.bSearch1(my, wte);
+    i = BurmeDate.bSearch1(my, wte);
     if (i >= 0) EW = 1; //correct watat exceptions
 
     return { EI: EI, WO: WO, NM: NM, EW: EW };
   }
-
+  //----------------------------------------------------------------------------
+  // Search first dimension in a 2D array
+  // input: (k=key,A=array)
+  // output: (i=index)
   static bSearch2(k, A) {
     var i = 0;
     var l = 0;
@@ -604,7 +757,10 @@ export class ceMmDateTime extends ceDateTime {
     }
     return -1;
   }
-
+  //-----------------------------------------------------------------------------
+  // Search a 1D array
+  // input: (k=key,A=array)
+  // output: (i=index)
   static bSearch1(k, A) {
     var i = 0;
     var l = 0;
@@ -617,41 +773,59 @@ export class ceMmDateTime extends ceDateTime {
     }
     return -1;
   }
-
+  //-------------------------------------------------------------------------
+  // Check watat (intercalary month)
+  // input: (my = myanmar year)
+  // output:  ( watat = intercalary month [1=watat, 0=common]
+  //  fm = full moon day of 2nd Waso in jdn_mm (jdn+6.5 for MMT) [only valid when watat=1])
+  // dependency: GetMyConst(my)
   static cal_watat(my) {
-    var SY = 1577917828.0 / 4320000.0;
-    var LM = 1577917828.0 / 53433336.0;
-    var MO = 1954168.050623;
-    var c = ceMmDateTime.GetMyConst(my);
-    var TA = (SY / 12 - LM) * (12 - c.NM);
-    var ed = (SY * (my + 3739)) % LM;
-    if (ed < TA) ed += LM;
-    var fm = Math.round(SY * my + MO - ed + 4.5 * LM + c.WO);
+    //get data for respective era
+    var SY = 1577917828.0 / 4320000.0; //solar year (365.2587565)
+    var LM = 1577917828.0 / 53433336.0; //lunar month (29.53058795)
+    var MO = 1954168.050623; //beginning of 0 ME for MMT
+    var c = BurmeDate.GetMyConst(my); // get constants for the corresponding calendar era
+    var TA = (SY / 12 - LM) * (12 - c.NM); //threshold to adjust
+    var ed = (SY * (my + 3739)) % LM; // excess day
+    if (ed < TA) ed += LM; //adjust excess days
+    var fm = Math.round(SY * my + MO - ed + 4.5 * LM + c.WO); //full moon day of 2nd Waso
     var TW = 0,
       watat = 0; //find watat
     if (c.EI >= 2) {
+      //if 2nd era or later find watat based on excess days
       TW = LM - (SY / 12 - LM) * c.NM;
       if (ed >= TW) watat = 1;
     } else {
+      //if 1st era,find watat by 19 years metonic cycle
+      //Myanmar year is divided by 19 and there is intercalary month
+      //if the remainder is 2,5,7,10,13,15,18
+      //https://github.com/kanasimi/CeJS/blob/master/data/date/calendar.js#L2330
       watat = (my * 7 + 2) % 19;
       if (watat < 0) watat += 19;
       watat = Math.floor(watat / 12);
     }
-    watat ^= c.EW;
+    watat ^= c.EW; //correct watat exceptions
     return { fm: fm, watat: watat };
   }
-
+  //-------------------------------------------------------------------------
+  // Check Myanmar Year
+  // input: (my -myanmar year)
+  // output:  (myt =year type [0=common, 1=little watat, 2=big watat],
+  // tg1 = the 1st day of Tagu as jdn_mm (Julian Day Number for MMT)
+  // fm = full moon day of [2nd] Waso as Julain Day Number
+  // werr= watat discrepancy [0=ok, 1= error] )
+  // dependency: cal_watat(my)
   static cal_my(my) {
     var yd = 0,
       y1,
       nd = 0,
       werr = 0,
       fm = 0;
-    var y2 = ceMmDateTime.cal_watat(my);
+    var y2 = BurmeDate.cal_watat(my);
     var myt = y2.watat;
     do {
       yd++;
-      y1 = ceMmDateTime.cal_watat(my - yd);
+      y1 = BurmeDate.cal_watat(my - yd);
     } while (y1.watat == 0 && yd < 3);
     if (myt) {
       nd = (y2.fm - y1.fm) % 354;
@@ -664,60 +838,109 @@ export class ceMmDateTime extends ceDateTime {
     var tg1 = y1.fm + 354 * yd - 102;
     return { myt: myt, tg1: tg1, fm: fm, werr: werr };
   }
-
+  //-------------------------------------------------------------------------
+  // Julian day number to Myanmar date
+  // input: (jdn -julian day number)
+  // output:  (
+  // myt =year type [0=common, 1=little watat, 2=big watat],
+  // my = year,
+  // mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //   Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //   Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  // md = day of the month [1 to 30])
+  // dependency: cal_my(my)
   static j2m(jdn) {
-    jdn = Math.round(jdn);
-    var SY = 1577917828.0 / 4320000.0;
-    var MO = 1954168.050623;
+    jdn = Math.round(jdn); //convert jdn to integer
+    var SY = 1577917828.0 / 4320000.0; //solar year (365.2587565)
+    var MO = 1954168.050623; //beginning of 0 ME
     var my, yo, dd, myl, mmt, a, b, c, e, f, mm, md;
-    my = Math.floor((jdn - 0.5 - MO) / SY);
-    yo = ceMmDateTime.cal_my(my);
-    dd = jdn - yo.tg1 + 1;
+    my = Math.floor((jdn - 0.5 - MO) / SY); //Myanmar year
+    yo = BurmeDate.cal_my(my); //check year
+    dd = jdn - yo.tg1 + 1; //day count
     b = Math.floor(yo.myt / 2);
-    c = Math.floor(1 / (yo.myt + 1));
-    myl = 354 + (1 - c) * 30 + b;
-    mmt = Math.floor((dd - 1) / myl);
+    c = Math.floor(1 / (yo.myt + 1)); //big wa and common yr
+    myl = 354 + (1 - c) * 30 + b; //year length
+    mmt = Math.floor((dd - 1) / myl); //month type: late =1 or early = 0
     dd -= mmt * myl;
-    a = Math.floor((dd + 423) / 512);
-    mm = Math.floor((dd - b * a + c * a * 30 + 29.26) / 29.544);
+    a = Math.floor((dd + 423) / 512); //adjust day count and threshold
+    mm = Math.floor((dd - b * a + c * a * 30 + 29.26) / 29.544); //month
     e = Math.floor((mm + 12) / 16);
     f = Math.floor((mm + 11) / 16);
-    md = dd - Math.floor(29.544 * mm - 29.26) - b * e + c * f * 30;
-    mm += f * 3 - e * 4 + 12 * mmt;
+    md = dd - Math.floor(29.544 * mm - 29.26) - b * e + c * f * 30; //day
+    mm += f * 3 - e * 4 + 12 * mmt; // adjust month numbers for late months
     return { myt: yo.myt, my: my, mm: mm, md: md };
   }
-
+  //-------------------------------------------------------------------------
+  // Get moon phase from day of the month, month, and year type.
+  // input: (
+  //    md= day of the month [1-30],
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    myt = year type [0=common, 1=little watat, 2=big watat])
+  // output: (mp =moon phase [0=waxing, 1=full moon, 2=waning, 3=new moon])
   static cal_mp(md, mm, myt) {
-    var mml = ceMmDateTime.cal_mml(mm, myt);
+    var mml = BurmeDate.cal_mml(mm, myt);
     return (
       Math.floor((md + 1) / 16) + Math.floor(md / 16) + Math.floor(md / mml)
     );
   }
-
+  //-------------------------------------------------------------------------
+  // Get length of month from month, and year type.
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    myt = year type [0=common, 1=little watat, 2=big watat])
+  // output: (mml = length of the month [29 or 30 days])
   static cal_mml(mm, myt) {
     var mml = 30 - (mm % 2); //month length
     if (mm == 3) mml += Math.floor(myt / 2); //adjust if Nayon in big watat
     return mml;
   }
-
+  //-------------------------------------------------------------------------
+  // Get the apparent length of the year from year type.
+  // input: ( myt = year type [0=common, 1=little watat, 2=big watat])
+  // output: ( myl= year length [354, 384, or 385 days])
   static cal_myl(myt) {
     return 354 + (1 - Math.floor(1 / (myt + 1))) * 30 + Math.floor(myt / 2);
   }
-
+  //-------------------------------------------------------------------------
+  // Get fortnight day from month day
+  // input: ( md= day of the month [1-30])
+  // output: (mf= fortnight day [1 to 15])
   static cal_mf(md) {
     return md - 15 * Math.floor(md / 16);
   }
-
+  //-------------------------------------------------------------------------
+  // Get day of month from fortnight day, moon phase, and length of the month
+  // input: (
+  //   mf = fortnight day [1 to 15],
+  //   mp = moon phase [0=waxing, 1=full moon, 2=waning, 3=new moon]
+  //   mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //        Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //        Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //   myt = year type [0=common, 1=little watat, 2=big watat])
+  // output: ( md = day of the month [1-30])
   static cal_md(mf, mp, mm, myt) {
-    var mml = ceMmDateTime.cal_mml(mm, myt);
+    var mml = BurmeDate.cal_mml(mm, myt);
     var m1 = mp % 2;
     var m2 = Math.floor(mp / 2);
     return m1 * (15 + m2 * (mml - 15)) + (1 - m1) * (mf + 15 * m2);
   }
-
+  //-------------------------------------------------------------------------
+  // Myanmar date to Julian day number
+  // input:  (
+  //  my = year,
+  //  mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //    Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //    Tabaung=12 , Late Tagu=13, Late Kason=14 ],
+  //  md = day of the month [1-30]
+  // output: (jd -julian day number)
+  // dependency: cal_my(my)
   static m2j(my, mm, md) {
     var b, c, dd, myl, mmt;
-    var yo = ceMmDateTime.cal_my(my); //check year
+    var yo = BurmeDate.cal_my(my); //check year
     mmt = Math.floor(mm / 13);
     mm = (mm % 13) + mmt; // to 1-12 with month type
     b = Math.floor(yo.myt / 2);
@@ -732,22 +955,47 @@ export class ceMmDateTime extends ceDateTime {
     dd += mmt * myl; //adjust day count with year length
     return dd + yo.tg1 - 1;
   }
-
+  //-------------------------------------------------------------------------
+  // set Myanmar date time for a timezone and a calendar type
+  // timezone and calendar type won't be affected (tz and ct remain unchanged)
+  // input:  (
+  //  my = year,
+  //  mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //    Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //    Tabaung=12 , Late Tagu=13, Late Kason=14 ],
+  //  md = day of the month [1-30]
+  // ... )
   SetMDateTime(my, mm, md, hour = 12, minute = 0, second = 0, tz = 0) {
     this.m_jd =
-      ceMmDateTime.m2j(my, mm, md) +
-      ceDateTime.t2d(hour, minute, second) -
-      tz / 24.0;
+      BurmeDate.m2j(my, mm, md) + Burme.t2d(hour, minute, second) - tz / 24.0;
   }
-
+  //-------------------------------------------------------------------------
+  //Checking Astrological days
+  // More details @ http://cool-emerald.blogspot.sg/2013/12/myanmar-astrological-calendar-days.html
+  //-------------------------------------------------------------------------
+  // Get sabbath day and sabbath eve from day of the month, month, and year type.
+  // input: (
+  //    md= day of the month [1-30],
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    myt = year type [0=common, 1=little watat, 2=big watat])
+  // output: ( [1=sabbath, 2=sabbath eve, 0=else])
   static cal_sabbath(md, mm, myt) {
-    var mml = ceMmDateTime.cal_mml(mm, myt);
+    var mml = BurmeDate.cal_mml(mm, myt);
     var s = 0;
     if (md == 8 || md == 15 || md == 23 || md == mml) s = 1;
     if (md == 7 || md == 14 || md == 22 || md == mml - 1) s = 2;
     return s;
   }
-
+  //-------------------------------------------------------------------------
+  // Get yatyaza from month, and weekday
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=yatyaza, 0=else])
   static cal_yatyaza(mm, wd) {
     //first waso is considered waso
     var m1 = mm % 4;
@@ -757,7 +1005,14 @@ export class ceMmDateTime extends ceDateTime {
     if (wd == wd1 || wd == wd2) yatyaza = 1;
     return yatyaza;
   }
-
+  //-------------------------------------------------------------------------
+  // Get pyathada from month, and weekday
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=pyathada, 2=afternoon pyathada, 0=else])
   static cal_pyathada(mm, wd) {
     //first waso is considered waso
     var m1 = mm % 4;
@@ -767,20 +1022,41 @@ export class ceMmDateTime extends ceDateTime {
     if (m1 == wda[wd]) pyathada = 1;
     return pyathada;
   }
-
+  //-------------------------------------------------------------------------
+  // nagahle
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ])
+  // output: ( [0=west, 1=north, 2=east, 3=south])
   static cal_nagahle(mm) {
     if (mm <= 0) mm = 4; //first waso is considered waso
     return Math.floor((mm % 12) / 3);
   }
-
+  //-------------------------------------------------------------------------
+  // mahabote
+  // input: (
+  //  my = year,
+  //  wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [0=Binga, 1=Atun, 2=Yaza, 3=Adipati, 4= Marana, 5=Thike, 6=Puti])
   static cal_mahabote(my, wd) {
     return (my - wd) % 7;
   }
-
+  //-------------------------------------------------------------------------
+  // nakhat
+  // input: ( my = year )
+  // output: ( [0=Ogre, 1=Elf, 2=Human] )
   static cal_nakhat(my) {
     return my % 3;
   }
-
+  //-------------------------------------------------------------------------
+  // thamanyo
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=thamanyo, 0=else])
   static cal_thamanyo(mm, wd) {
     var mmt = Math.floor(mm / 13);
     mm = (mm % 13) + mmt; // to 1-12 with month type
@@ -792,7 +1068,12 @@ export class ceMmDateTime extends ceDateTime {
     if (wd2 <= 1) thamanyo = 1;
     return thamanyo;
   }
-
+  //-------------------------------------------------------------------------
+  // Get amyeittasote
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=amyeittasote, 0=else])
   static cal_amyeittasote(md, wd) {
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
     var amyeittasote = 0;
@@ -800,7 +1081,12 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == wda[wd]) amyeittasote = 1;
     return amyeittasote;
   }
-
+  //-------------------------------------------------------------------------
+  // Get warameittugyi
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=warameittugyi, 0=else])
   static cal_warameittugyi(md, wd) {
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
     var warameittugyi = 0;
@@ -808,7 +1094,12 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == wda[wd]) warameittugyi = 1;
     return warameittugyi;
   }
-
+  //-------------------------------------------------------------------------
+  // Get warameittunge
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=warameittunge, 0=else])
   static cal_warameittunge(md, wd) {
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
     var warameittunge = 0;
@@ -816,7 +1107,12 @@ export class ceMmDateTime extends ceDateTime {
     if (12 - mf == wn) warameittunge = 1;
     return warameittunge;
   }
-
+  //-------------------------------------------------------------------------
+  // Get yatpote
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=yatpote, 0=else])
   static cal_yatpote(md, wd) {
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
     var yatpote = 0;
@@ -824,7 +1120,12 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == wda[wd]) yatpote = 1;
     return yatpote;
   }
-
+  //-------------------------------------------------------------------------
+  // Get thamaphyu
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=thamaphyu, 0=else])
   static cal_thamaphyu(md, wd) {
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
     var thamaphyu = 0;
@@ -835,7 +1136,12 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == 4 && wd == 5) thamaphyu = 1;
     return thamaphyu;
   }
-
+  //-------------------------------------------------------------------------
+  // Get nagapor
+  // input: (
+  //    md= day of the month [1-30],
+  //    wd= weekday  [0=sat, 1=sun, ..., 6=fri])
+  // output: ( [1=nagapor, 0=else])
   static cal_nagapor(md, wd) {
     var nagapor = 0;
     var wda = [26, 21, 2, 10, 18, 2, 21];
@@ -846,7 +1152,14 @@ export class ceMmDateTime extends ceDateTime {
       nagapor = 1;
     return nagapor;
   }
-
+  //-------------------------------------------------------------------------
+  // yatyotema
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    md= day of the month [1-30])
+  // output: ( [1=yatyotema, 0=else])
   static cal_yatyotema(mm, md) {
     var mmt = Math.floor(mm / 13);
     mm = (mm % 13) + mmt; // to 1-12 with month type
@@ -858,7 +1171,14 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == m1) yatyotema = 1;
     return yatyotema;
   }
-
+  //-------------------------------------------------------------------------
+  // mahayatkyan
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    md= day of the month [1-30])
+  // output: ( [1=mahayatkyan, 0=else])
   static cal_mahayatkyan(mm, md) {
     if (mm <= 0) mm = 4; //first waso is considered waso
     var mf = md - 15 * Math.floor(md / 16); //get fortnight day [0-15]
@@ -867,7 +1187,14 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == m1) mahayatkyan = 1;
     return mahayatkyan;
   }
-
+  //-------------------------------------------------------------------------
+  // shanyat
+  // input: (
+  //    mm = month [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //         Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //         Tabaung=12, Late Tagu=13, Late Kason=14 ],
+  //    md= day of the month [1-30])
+  // output: ( [1=shanyat, 0=else])
   static cal_shanyat(mm, md) {
     var mmt = Math.floor(mm / 13);
     mm = (mm % 13) + mmt; // to 1-12 with month type
@@ -878,62 +1205,74 @@ export class ceMmDateTime extends ceDateTime {
     if (mf == sya[mm - 1]) shanyat = 1;
     return shanyat;
   }
-
+  //-------------------------------------------------------------------------
+  // get astrological information
+  // input: (jdn: Julian Day Number)
+  // output: (array of strings)
   static cal_astro(jdn) {
     jdn = Math.round(jdn);
     var myt, my, mm, md;
     var hs = [];
-    var yo = ceMmDateTime.j2m(jdn);
+    var yo = BurmeDate.j2m(jdn);
     myt = yo.myt;
     my = yo.my;
     mm = yo.mm;
     md = yo.md;
     var wd = (jdn + 2) % 7; //week day [0=sat, 1=sun, ..., 6=fri]
-    if (ceMmDateTime.cal_thamanyo(mm, wd)) {
+    if (BurmeDate.cal_thamanyo(mm, wd)) {
       hs.push("Thamanyo");
     }
-    if (ceMmDateTime.cal_amyeittasote(md, wd)) {
+    if (BurmeDate.cal_amyeittasote(md, wd)) {
       hs.push("Amyeittasote");
     }
-    if (ceMmDateTime.cal_warameittugyi(md, wd)) {
+    if (BurmeDate.cal_warameittugyi(md, wd)) {
       hs.push("Warameittugyi");
     }
-    if (ceMmDateTime.cal_warameittunge(md, wd)) {
+    if (BurmeDate.cal_warameittunge(md, wd)) {
       hs.push("Warameittunge");
     }
-    if (ceMmDateTime.cal_yatpote(md, wd)) {
+    if (BurmeDate.cal_yatpote(md, wd)) {
       hs.push("Yatpote");
     }
-    if (ceMmDateTime.cal_thamaphyu(md, wd)) {
+    if (BurmeDate.cal_thamaphyu(md, wd)) {
       hs.push("Thamaphyu");
     }
-    if (ceMmDateTime.cal_nagapor(md, wd)) {
+    if (BurmeDate.cal_nagapor(md, wd)) {
       hs.push("Nagapor");
     }
-    if (ceMmDateTime.cal_yatyotema(mm, md)) {
+    if (BurmeDate.cal_yatyotema(mm, md)) {
       hs.push("Yatyotema");
     }
-    if (ceMmDateTime.cal_mahayatkyan(mm, md)) {
+    if (BurmeDate.cal_mahayatkyan(mm, md)) {
       hs.push("Mahayatkyan");
     }
-    if (ceMmDateTime.cal_shanyat(mm, md)) {
+    if (BurmeDate.cal_shanyat(mm, md)) {
       hs.push("Shanyat");
     }
     return hs;
   }
+  // End of core functions ###############################################################
 
+  //-----------------------------------------------------------------------------
+  // Start of checking holidays ##################################################
+  //-----------------------------------------------------------------------------
+  // Get holidays
+  // input: (jdn=Julian Day Number)
+  // output: ( array of strings)
+  // Thanks to Ye Lin Kyaw and Aye Nyein for the knowledge about
+  // the Myanmar calendar and the new year
   static cal_holiday(jdn) {
     jdn = Math.round(jdn);
     var myt, my, mm, md, mp, mmt, gy, gm, gd;
-    var yo = ceMmDateTime.j2m(jdn);
+    var yo = BurmeDate.j2m(jdn);
     myt = yo.myt;
     my = yo.my;
     mm = yo.mm;
     md = yo.md;
-    mp = ceMmDateTime.cal_mp(md, mm, myt);
+    mp = BurmeDate.cal_mp(md, mm, myt);
     mmt = Math.floor(mm / 13);
     var hs = [];
-    var go = ceDateTime.j2w(jdn);
+    var go = Burme.j2w(jdn);
     gy = go.y;
     gm = go.m;
     gd = go.d;
@@ -1036,14 +1375,21 @@ export class ceMmDateTime extends ceDateTime {
         2459300, 2459303, 2459323, 2459324, 2459335, 2459548, 2459573,
       ];
 
-      if (ceMmDateTime.bSearch1(jdn, substituteHoliday) >= 0) {
+      if (BurmeDate.bSearch1(jdn, substituteHoliday) >= 0) {
         hs.push("Holiday");
       }
     }
 
     return hs;
   }
-
+  //----------------------------------------------------------------------------
+  // DoE : Date of Easter using  "Meeus/Jones/Butcher" algorithm
+  // Reference: Peter Duffett-Smith, Jonathan Zwart',
+  //  "Practical Astronomy with your Calculator or Spreadsheet,"
+  //  4th Etd, Cambridge university press, 2011. Page-4.
+  // input: (y=year)
+  // output: (j=julian day number)
+  // dependency: w2j()
   static DoE(y) {
     var a, b, c, d, e, f, g, h, i, k, l, m, p, q, n;
     a = y % 19;
@@ -1061,26 +1407,31 @@ export class ceMmDateTime extends ceDateTime {
     q = h + l - 7 * m + 114;
     p = (q % 31) + 1;
     n = Math.floor(q / 31);
-    return Math.round(ceDateTime.w2j(y, n, p, 12, 0, 0, 1)); // this is for Gregorian
+    return Math.round(Burme.w2j(y, n, p, 12, 0, 0, 1)); // this is for Gregorian
   }
-
+  //----------------------------------------------------------------------------
+  // Get other holidays
+  // input: (jdn: Julian Day Number)
+  // output: (array of strings)
+  // dependency: DoE(), j2w()
   static cal_holiday2(jdn) {
     jdn = Math.round(jdn);
     var myt, my, mm, md, mp, mmt, gy, gm, gd;
-    var yo = ceMmDateTime.j2m(jdn);
+    var yo = BurmeDate.j2m(jdn);
     myt = yo.myt;
     my = yo.my;
     mm = yo.mm;
     md = yo.md;
-    mp = ceMmDateTime.cal_mp(md, mm, myt);
+    mp = BurmeDate.cal_mp(md, mm, myt);
     mmt = Math.floor(mm / 13);
     var hs = [];
-    var go = ceDateTime.j2w(jdn);
+    var go = Burme.j2w(jdn);
     gy = go.y;
     gm = go.m;
     gd = go.d;
-
-    var doe = ceMmDateTime.DoE(gy);
+    //---------------------------------
+    // holidays on gregorian calendar
+    var doe = BurmeDate.DoE(gy);
     if (gy <= 2017 && gm == 1 && gd == 1) {
       hs.push("New Year's Day");
     } else if (gy >= 1915 && gm == 2 && gd == 13) {
@@ -1137,21 +1488,50 @@ export class ceMmDateTime extends ceDateTime {
     else if (mm == 5 && md == 23) {
       hs.push("Yadanagu Pwe");
     } //Yadanagu Pwe
-
+    //----------------------------------------------------------------------------
+    // //other holidays
+    // var ghEid2=[2456936,2457290,2457644,2457998,2458353,2458707];
+    // var ghCNY=[2456689, 2456690, 2457073, 2457074, 2457427, 2457428, 2457782,
+    // 2457783, 2458166, 2458520, 2458874, 2459257, 2459612, 2459967, 2460351,
+    // 	2460705, 2461089, 2461443, 2461797, 2462181, 2462536];
+    // if(BurmeDate.bSearch1(jdn,ghEid2)>=0) {hs.push("Eid");}
+    // if(BurmeDate.bSearch1(jdn,ghCNY)>=0) {hs.push("Chinese New Year's Day");}
+    //----------------------------------------------------------------------------
     return hs;
   }
 
+  //-----------------------------------------------------------------------------
+  //End of checking holidays ####################################################
+
+  //-------------------------------------------------------------------------
+  // jd to date string in Myanmar calendar
+  // input: (jd:julian date,
+  //  fs: format string [Optional argument: "&y &M &P &ff"]
+  //  tz : time zone offset in hours (Optional, e.g. 8 for GMT +8))
+  // output: date string in Myanmar calendar according to fm
+  // where formatting strings are as follows
+  // &yyyy : Myanmar year [0000-9999, e.g. 1380]
+  // &YYYY : Sasana year [0000-9999, e.g. 2562]
+  // &y : Myanmar year [0-9999, e.g. 138]
+  // &mm : month with zero padding [01-14]
+  // &M : month [e.g. January]
+  // &m : month [1-14]
+  // &P : moon phase [e.g. waxing, waning, full moon, or new moon]
+  // &dd : day of the month with zero padding [01-31]
+  // &d : day of the month [1-31]
+  // &ff : fortnight day with zero padding [01-15]
+  // &f : fortnight day [1-15]
   static j2ms(jd, fs = "&y &M &P &ff", tz = 0) {
     jd += tz / 24.0;
     var jdn = Math.round(jd);
     var myt, my, mm, md, mp, mf;
-    var yo = ceMmDateTime.j2m(jdn);
+    var yo = BurmeDate.j2m(jdn);
     myt = yo.myt;
     my = yo.my;
     mm = yo.mm;
     md = yo.md;
-    mp = ceMmDateTime.cal_mp(md, mm, myt);
-    mf = ceMmDateTime.cal_mf(md);
+    mp = BurmeDate.cal_mp(md, mm, myt);
+    mf = BurmeDate.cal_mf(md);
     var mma = [
       "First Waso",
       "Tagu",
@@ -1243,18 +1623,18 @@ export class ceMmDateTime extends ceDateTime {
     //--------------------------------------------------------
     return fm;
   }
-
+  //-------------------------------------------------------------------------
   // get properties
 
   // Myanmar year type
   get myt() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
+    var yo = BurmeDate.j2m(this.jdnl);
     return yo.myt;
   }
 
   // Myanmar year
   get my() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
+    var yo = BurmeDate.j2m(this.jdnl);
     return yo.my;
   }
 
@@ -1287,37 +1667,41 @@ export class ceMmDateTime extends ceDateTime {
     return yna[this.my % 12];
   }
 
+  // Myanmar month [1-14]
+  // [Tagu=1, Kason=2, Nayon=3, 1st Waso=0, (2nd) Waso=4, Wagaung=5,
+  //  Tawthalin=6, Thadingyut=7, Tazaungmon=8, Nadaw=9, Pyatho=10, Tabodwe=11,
+  //  Tabaung=12, Late Tagu=13, Late Kason=14 ]
   get mm() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
+    var yo = BurmeDate.j2m(this.jdnl);
     return yo.mm;
   }
 
   // Myanmar day of the month [1-30]
   get md() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
+    var yo = BurmeDate.j2m(this.jdnl);
     return yo.md;
   }
 
   // Moon phase [0=waxing, 1=full moon, 2=waning, 3=new moon]
   get mp() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
-    return ceMmDateTime.cal_mp(yo.md, yo.mm, yo.myt);
+    var yo = BurmeDate.j2m(this.jdnl);
+    return BurmeDate.cal_mp(yo.md, yo.mm, yo.myt);
   }
 
   // Fortnight day [1-15]
   get mf() {
-    return ceMmDateTime.cal_mf(this.md);
+    return BurmeDate.cal_mf(this.md);
   }
 
   // Length of this Myanmar month
   get mmlen() {
-    return ceMmDateTime.cal_mml(this.mm, this.myt);
+    return BurmeDate.cal_mml(this.mm, this.myt);
   }
 
   // get sabbath string
   get sabbath() {
-    var yo = ceMmDateTime.j2m(this.jdnl);
-    var sb = ceMmDateTime.cal_sabbath(yo.md, yo.mm, yo.myt);
+    var yo = BurmeDate.j2m(this.jdnl);
+    var sb = BurmeDate.cal_sabbath(yo.md, yo.mm, yo.myt);
     var str = "";
     if (sb == 1) str = "Sabbath";
     else if (sb == 2) str = "Sabbath Eve";
@@ -1326,63 +1710,93 @@ export class ceMmDateTime extends ceDateTime {
 
   // get yatyaza string
   get yatyaza() {
-    var v = ceMmDateTime.cal_yatyaza(this.mm, this.w);
+    var v = BurmeDate.cal_yatyaza(this.mm, this.w);
     return v ? "Yatyaza" : "";
   }
 
   // get pyathada string
   get pyathada() {
-    var v = ceMmDateTime.cal_pyathada(this.mm, this.w);
+    var v = BurmeDate.cal_pyathada(this.mm, this.w);
     var pa = ["", "Pyathada", "Afternoon Pyathada"];
     return pa[v % 3];
   }
 
   // get nagahle direction
   get nagahle() {
-    var v = ceMmDateTime.cal_nagahle(this.mm);
+    var v = BurmeDate.cal_nagahle(this.mm);
     var pa = ["West", "North", "East", "South"];
     return pa[v % 4];
   }
 
   // get mahabote
   get mahabote() {
-    var v = ceMmDateTime.cal_mahabote(this.my, this.w);
+    var v = BurmeDate.cal_mahabote(this.my, this.w);
     var pa = ["Binga", "Atun", "Yaza", "Adipati", "Marana", "Thike", "Puti"];
     return pa[v % 7];
   }
 
   // get nakhat
   get nakhat() {
-    var v = ceMmDateTime.cal_nakhat(this.my);
+    var v = BurmeDate.cal_nakhat(this.my);
     var pa = ["Ogre", "Elf", "Human"];
     return pa[v % 3];
   }
 
   // get the array of astrological days
   get astro() {
-    return ceMmDateTime.cal_astro(this.jdnl);
+    return BurmeDate.cal_astro(this.jdnl);
   }
 
   // get the array of public holidays
   get holidays() {
-    return ceMmDateTime.cal_holiday(this.jdnl);
+    return BurmeDate.cal_holiday(this.jdnl);
   }
 
   // get the array of other holidays
   get holidays2() {
-    return ceMmDateTime.cal_holiday2(this.jdnl);
+    return BurmeDate.cal_holiday2(this.jdnl);
   }
 
+  //-------------------------------------------------------------------------
+  // get Myanmar Date String
+  // input: (
+  //  fs: format string [Optional argument: "&yyyy &M &P &ff"]
+  //  tz : time zone offset in hours (Optional, e.g. 8 for GMT +8))
+  // output: date string in Myanmar calendar according to fm
+  // where formatting strings are as follows
+  // &yyyy : Myanmar year [0000-9999, e.g. 1380]
+  // &YYYY : Sasana year [0000-9999, e.g. 2562]
+  // &mm : month with zero padding [01-14]
+  // &M : month [e.g. Tagu]
+  // &m : month [1-14]
+  // &P : moon phase [e.g. waxing, waning, full moon, or new moon]
+  // &dd : day of the month with zero padding [01-31]
+  // &d : day of the month [1-31]
+  // &ff : fortnight day with zero padding [01-15]
+  // &f : fortnight day [1-15]
   ToMString(fs = "&yyyy &M &P &ff") {
-    return ceMmDateTime.j2ms(this.jd, fs, this.tz);
+    return BurmeDate.j2ms(this.jd, fs, this.tz);
   }
-} //ceMmDateTime
+} //BurmeDate
 
-class ceMmTranslate {
+//-----------------------------------------------------------------------
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//-----------------------------------------------------------------------
+//Start of chronicle ####################################################
+//-----------------------------------------------------------------------
+
+class BurmeTranslate {
+  //-------------------------------------------------------------------------
   constructor() {
-    this.m_lang = ceMmTranslate.Init();
+    this.m_lang = BurmeTranslate.Init();
   }
-
+  //-----------------------------------------------------------------------------
+  // Translate
+  // inputs ( str = string to translate,
+  //    toLn = to language number [optional: 1]
+  //    fromLn = from language number [optional: 0],)
+  // Language number: 0: English, 1: Myanmar (Unicode), 2: Zawgyi,
+  //		3: Mon, 4: Shan, 5: Karen
   T(str, toLn = 1, fromLn = 0) {
     var i;
     var l = this.m_lang.length;
@@ -1395,7 +1809,15 @@ class ceMmTranslate {
     }
     return str;
   }
-
+  //-----------------------------------------------------------------------------
+  // Initialize the language catalog with 2 dimensional array
+  // Index 0: English, 1: Myanmar (Unicode), 2: Zawgyi,
+  //		3: Mon, 4: Tai, 5: Karen
+  //Credit:
+  //Mon language translation by 'ITVilla': http://it-villa.blogspot.com/
+  //and Proof reading by Mikau Nyan
+  //Tai language translation by 'Jao Tai Num'
+  // and  https://www.taidictionary.com/
   static Init() {
     return [
       [
@@ -1837,4 +2259,7 @@ class ceMmTranslate {
       //[", ","၊ ","၊ ","၊ ","၊ ","၊ "],
     ];
   }
-}
+  //-----------------------------------------------------------------------------
+} //BurmeTranslate
+
+export { Burme, BurmeDate, BurmeTranslate };

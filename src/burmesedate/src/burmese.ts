@@ -1,7 +1,7 @@
 /* cSpell:disable */
 
 import language from "../lib/language.ts";
-import { ceMmDateTime } from "../lib/ceMmDateTime.js";
+import { BurmeDate } from "../lib/burmesedate.js";
 
 /**
  * Translates the given text from one language to another.
@@ -65,13 +65,16 @@ export function GetMmDateTime(date: string, lang: number) {
   const y = parseInt(date.split("-")[0]);
   const m = parseInt(date.split("-")[1]);
   const d = parseInt(date.split("-")[2]);
-  const julianDayNumber = ceMmDateTime.w2j(y, m, d);
-  const mdt = new ceMmDateTime(julianDayNumber, 6.5);
+  const julianDayNumber = BurmeDate.w2j(y, m, d);
+  const mdt = new BurmeDate(julianDayNumber, 6.5);
   const sasanaYear = translate({ text: mdt.ToMString("&YYYY"), lang: lang });
   const burmeseYear = translate({ text: mdt.ToMString("&yyyy"), lang: lang });
   const burmeseMonth = translate({ text: mdt.ToMString("&M"), lang: lang });
   const burmeseDay = translate({ text: mdt.ToMString("&f"), lang: lang });
-  const burmeseWeekDay = translate({ text: mdt.ToString("%W "), lang: lang });
+  const burmeseWeekDay: string = translate({
+    text: mdt.ToString("%W "),
+    lang: lang,
+  });
   const lunarPhase = translate({ text: mdt.ToMString("&P"), lang: lang });
   const yatyarzar = translate({ text: mdt.yatyaza, lang: lang });
   const pyatthadar = translate({ text: mdt.pyathada, lang: lang });
@@ -81,7 +84,7 @@ export function GetMmDateTime(date: string, lang: number) {
     text: mdt.mmlen.toString(),
     lang: lang,
   });
-  const BURMESE_YEAR_IN_NUMBER = ceMmDateTime.j2m(julianDayNumber).my;
+  const BURMESE_YEAR_IN_NUMBER = BurmeDate.j2m(julianDayNumber).my;
   const mmyt = ["common", "little watat", "big watat"][mdt.myt];
   const warHtutType = translate({ text: mmyt, lang: lang });
   const h = mdt.holidays;
@@ -205,7 +208,7 @@ export function MaharThingyan(my: number) {
       "Dec",
     ],
     ppp = thingyanTime(YearTo),
-    att = ceMmDateTime.j2w(ppp.ja),
+    att = BurmeDate.j2w(ppp.ja),
     AtatTime =
       att.y +
       "-" +
@@ -218,23 +221,23 @@ export function MaharThingyan(my: number) {
       att.n +
       ":" +
       Math.floor(att.s),
-    akt = ceMmDateTime.j2w(ppp.jk),
+    akt = BurmeDate.j2w(ppp.jk),
     AkyaTime = `${akt.y}-${emName[akt.m - 1]}-${akt.d} ${akt.h}:${
       akt.n
     }:${Math.floor(akt.s)}`,
-    akd = ceMmDateTime.j2w(ppp.dk),
-    akyod = ceMmDateTime.j2w(ppp.dk - 1),
+    akd = BurmeDate.j2w(ppp.dk),
+    akyod = BurmeDate.j2w(ppp.dk - 1),
     AkyoDay = `${akyod.y}-${emName[akyod.m - 1]}-${akyod.d}`,
     AkyaDay = `${akd.y}-${emName[akd.m - 1]}-${akd.d}`,
-    akyatd = ceMmDateTime.j2w(ppp.dk + 1),
+    akyatd = BurmeDate.j2w(ppp.dk + 1),
     AkyatDay = `${akyatd.y}-${emName[akyatd.m - 1]}-${akyatd.d}`,
-    atd = ceMmDateTime.j2w(ppp.da),
+    atd = BurmeDate.j2w(ppp.da),
     AtatDay = `${atd.y}-${emName[atd.m - 1]}-${atd.d}`,
-    nyd = ceMmDateTime.j2w(ppp.da + 1),
+    nyd = BurmeDate.j2w(ppp.da + 1),
     NewYearDay = `${nyd.y}-${emName[nyd.m - 1]}-${nyd.d}`;
   let AkyatDay2: string;
   if (ppp.da - ppp.dk > 2) {
-    const sakdd = ceMmDateTime.j2w(ppp.da - 1);
+    const sakdd = BurmeDate.j2w(ppp.da - 1);
     AkyatDay2 = `${sakdd.y}-${emName[sakdd.m - 1]}-${sakdd.d}`;
   } else {
     AkyatDay2 = "";

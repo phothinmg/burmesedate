@@ -1,12 +1,14 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/burmeseCalendar-api/index.ts"],
-  outDir: "./dist",
+  entry: ["src/index.ts"],
+  outDir: "./dist/browser",
   splitting: true,
   sourcemap: true,
-  dts: true,
-  format: "esm",
+  // dts: true,
+  format: "iife",
   bundle: true,
   treeshake: true,
+  minify: true,
+  name: "burmesedate"
 });
